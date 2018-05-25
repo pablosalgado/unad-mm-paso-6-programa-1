@@ -9,15 +9,24 @@ int pIFZ1 = 13; // PIR
 int pTSZ1 = 12; // Touch Sensor
 int pPSZ1 = 11; // Pressure sensor
 
-// Definición de puerto para control de los LED
+//
+// Definición de puertos de entrada para la ZONA 1
+//
+int pIFZ2 = 10; // PIR
+int pTSZ2 = 9;  // Touch Sensor
+int pPSZ2 = 8;  // Pressure sensor
+
+// Definición de puertos para control de los LED
 int pLV = 7;
 int pLA = 6;
 int pLR = 5;
 
-boolean alarma;
+boolean alarmaZ2;
+boolean alarmaZ1;
 
 void setup() {
-  alarma = false;
+  alarmaZ1 = false;
+  alarmaZ2 = false;
   
   // Configura puertos de la zona 1
   pinMode(pIFZ1, INPUT);
@@ -31,16 +40,14 @@ void setup() {
 
   lcd.begin();
   lcd.print("PASM Security");
-  delay(1000);
+  delay(300);
 }
 
 void loop() {
-  if (alarma) {
-    return;
-  }
+  // --------------------------------------------------------------------------
+  // ZONA 1
+  // --------------------------------------------------------------------------
   
-  lcd.clear();
-
   // Lectura de sensores de la ZONA 1
   boolean vIRZ1 = digitalRead(pIFZ1);
   boolean vTSZ1 = digitalRead(pTSZ1);
@@ -51,29 +58,81 @@ void loop() {
   boolean lAZ1 = vTSZ1 && !vPSZ1 || vIRZ1 && !vPSZ1;
   boolean lRZ1 = vPSZ1;
 
-  // Apagar todos los LED para visualizar el nuevo estado
-  digitalWrite(pLV, LOW);
-  digitalWrite(pLA, LOW);
-  digitalWrite(pLR, LOW);
-
-  lcd.setCursor(0,0);
-  lcd.print("Zona 1");
-  
-  lcd.setCursor(0,1);
-  if(lVZ1) {
-    digitalWrite(pLV, HIGH);
-    lcd.print("Normal");     
-  } else if (lAZ1) {
-    digitalWrite(pLA, HIGH);
-    lcd.print("Alerta");     
-  } else if (lRZ1) {
-    digitalWrite(pLR, HIGH);
-    lcd.print("Alarma");     
+  if(!alarmaZ1) {
+    alarmaZ1 = lRZ1;    
   }
 
-  // Enceder los LEDs 
+  // Visualizar estado de la ZONA 1. En caso de alarma se sigue desplegando el
+  // mensaje en el display, lo cual habilita el monitoreo de las restantes 
+  // zonas para intentar evitar una distracción en una zona mientras el objetivo
+  // es otra zona del museo.
+  if (!alarmaZ1) {
+    visualizarEstado("ZONA 1", lVZ1, lAZ1, lRZ1);
+  } else {
+    visualizarEstado("ZONA 1", false, false, true);
+    activarActuadores();
+  }
+
+  // --------------------------------------------------------------------------
+  // ZONA 2
+  // --------------------------------------------------------------------------
+
+  // Lectura de sensores de la ZONA 2
+  boolean vIRZ2 = digitalRead(pIFZ2);
+  boolean vTSZ2 = digitalRead(pTSZ2);
+  boolean vPSZ2 = digitalRead(pPSZ2);
+
+  // Determinar el estado de cada uno de los LEDs de la ZONA 2
+  boolean lVZ2 = !vIRZ2 && !vTSZ2 && !vPSZ2;
+  boolean lAZ2 = vTSZ2 && !vPSZ2 || vIRZ2 && !vPSZ2;
+  boolean lRZ2 = vPSZ2;
   
-  alarma = lRZ1;
+  if(!alarmaZ2) {
+    alarmaZ2 = lRZ2;    
+  }
+
+  // Visualizar estado de la ZONA 2. En caso de alarma se sigue desplegando el
+  // mensaje en el display, lo cual habilita el monitoreo de las restantes 
+  // zonas para intentar evitar una distracción en una zona mientras el objetivo
+  // es otra zona del museo.
+  if (!alarmaZ1) {
+    visualizarEstado("ZONA 2", lVZ2, lAZ2, lRZ2);
+  } else {
+    visualizarEstado("ZONA 2", false, false, true);
+    activarActuadores();
+  }
+}
+
+/**
+ * Visualiza el estado de la zona en el display y enciende los LED de acuerdo
+ * al mismo.
+ */
+void visualizarEstado(const char msg[], boolean lv, boolean la, boolean lr) {
+  lcd.clear();
+
+  lcd.setCursor(0,0);
+  lcd.print(msg);
+
+  lcd.setCursor(0,1);
+  if(lv) {
+    lcd.print("Normal");     
+  } else if (la) {
+    lcd.print("Alerta");     
+  } else if (lr) {
+    lcd.print("Alarma");     
+  }
+  
+  digitalWrite(pLV, lv);
+  digitalWrite(pLA, la);
+  digitalWrite(pLR, lr);
 
   delay(100);
 }
+
+/**
+ * Rutina de activación de los actuadores en caso de alarma
+ */
+void activarActuadores() {
+
+}
+
